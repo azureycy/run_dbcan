@@ -7,6 +7,7 @@
 # Updated by Le Huang at UNC, Mohamad Majd Raslan in the Yin Lab at NIU, Wei Li, Qiwei Ge in Dr.Yin's Lab at UNL
 # Updated by Haidong Yi for reconstructing codes,  Alex Fraser for adding functions.
 # Updated by Jinfang Zheng in Yinlab at UNL, new function, substrate prediciton based on dbCAN-PUL and dbCAN-sub database.
+# Revised by Xinpeng Zhang and Yuchen Yan at UNL, take the CAZyme annotation according to the tool priority.
 
 import argparse
 import os
@@ -579,7 +580,7 @@ def run_dbCAN(
         
         # End TF and TP prediction
         ##########################
-        # Begine CAZyme Extraction
+        # Begin CAZyme Extraction
         
         #define dictionary for cazyme_genes: key -> gene; val -> fams
         cazyme_genes = {}
@@ -598,6 +599,14 @@ def run_dbCAN(
                     dia.add(gene_key)
                     cazyme_genes.setdefault(gene_key, set()).update(fam_vals)
 
+        if tools[2] and os.path.exists(os.path.join(outPath, "dbcan-sub.hmm.out")):  ### deal with dbcan_sub result
+            with open(outDir + prefix + "dbcan-sub.hmm.out") as f:
+                next(f)
+                for line in f:
+                    row = line.rstrip().split("\t")
+                    dbs.add(row[5])
+                    cazyme_genes.setdefault(row[5], set()).add(row[0].split("_e")[0])
+
         if tools[1] and os.path.exists(os.path.join(outPath, "hmmer.out")):  # Deal with hmmer result
             with open(outDir + prefix + "hmmer.out") as f:
                 next(f)  # Skip the first line
@@ -607,14 +616,6 @@ def run_dbCAN(
                     fam_val = row[0].split(".hmm")[0]
                     hmm.add(gene_key)
                     cazyme_genes.setdefault(gene_key, set()).add(fam_val)
-
-        if tools[2] and os.path.exists(os.path.join(outPath, "dbcan-sub.hmm.out")):  ### deal with dbcan_sub result
-            with open(outDir + prefix + "dbcan-sub.hmm.out") as f:
-                next(f)
-                for line in f:
-                    row = line.rstrip().split("\t")
-                    dbs.add(row[5])
-                    cazyme_genes.setdefault(row[5], set()).add(row[0])
         
         cazyme_genes = {key: '|'.join(values) for key, values in cazyme_genes.items()}
         if tools.count(True) > 1:
