@@ -589,24 +589,6 @@ def run_dbCAN(
         hmm = set()
         dbs = set()
 
-        if tools[0] and os.path.exists(os.path.join(outPath, "diamond.out")):  # Deal with diamond result
-            with open(outDir + prefix + "diamond.out") as f:
-                next(f)  # Skip the first line
-                for line in f:
-                    row = line.rstrip().split("\t")
-                    gene_key = row[0]
-                    fam_vals = row[1].strip("|").split("|")[1:]
-                    dia.add(gene_key)
-                    cazyme_genes.setdefault(gene_key, set()).update(fam_vals)
-
-        if tools[2] and os.path.exists(os.path.join(outPath, "dbcan-sub.hmm.out")):  ### deal with dbcan_sub result
-            with open(outDir + prefix + "dbcan-sub.hmm.out") as f:
-                next(f)
-                for line in f:
-                    row = line.rstrip().split("\t")
-                    dbs.add(row[5])
-                    cazyme_genes.setdefault(row[5], set()).add(row[0].split("_e")[0])
-
         if tools[1] and os.path.exists(os.path.join(outPath, "hmmer.out")):  # Deal with hmmer result
             with open(outDir + prefix + "hmmer.out") as f:
                 next(f)  # Skip the first line
@@ -615,8 +597,30 @@ def run_dbCAN(
                     gene_key = row[2]
                     fam_val = row[0].split(".hmm")[0]
                     hmm.add(gene_key)
-                    cazyme_genes.setdefault(gene_key, set()).add(fam_val)
-        
+                    cazyme_genes.setdefault(gene_key, []).append(fam_val)
+
+        if tools[2] and os.path.exists(os.path.join(outPath, "dbcan-sub.hmm.out")):  ### deal with dbcan_sub result
+            with open(outDir + prefix + "dbcan-sub.hmm.out") as f:
+                next(f)
+                for line in f:
+                    row = line.rstrip().split("\t")
+                    fam_val = row[0]
+                    gene_key = row[5]
+                    dbs.add(gene_key)
+                    if gene_key not in hmm:
+                        cazyme_genes.setdefault(gene_key, []).append(fam_val.split("_e")[0])
+
+        if tools[0] and os.path.exists(os.path.join(outPath, "diamond.out")):  # Deal with diamond result
+            with open(outDir + prefix + "diamond.out") as f:
+                next(f)  # Skip the first line
+                for line in f:
+                    row = line.rstrip().split("\t")
+                    gene_key = row[0]
+                    fam_vals = row[1].strip("|").split("|")[1:]
+                    dia.add(gene_key)
+                    if gene_key not in hmm and gene_key not in dbs:
+                        cazyme_genes.setdefault(gene_key, []).extend(fam_vals)
+       
         cazyme_genes = {key: '|'.join(values) for key, values in cazyme_genes.items()}
         if tools.count(True) > 1:
             # candidate cazymes should be identified by two tools
